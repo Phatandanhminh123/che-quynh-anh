@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chè Quỳnh Anh - Máy Kiosk Tự Phục Vụ</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; }
+        .kiosk-container { max-width: 550px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #ddd; }
+        .qty-btn { width: 35px; height: 35px; background: #cc0066; color: white; border: none; font-size: 18px; border-radius: 5px; cursor: pointer; }
+        .btn-order { background: #cc0066; color: white; padding: 15px; border: none; width: 100%; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        .receipt-print { display: none; text-align: center; font-family: monospace; padding: 20px; background: white; width: 280px; margin: 0 auto; }
+        @media print { .kiosk-container { display: none; } .receipt-print { display: block !important; } }
+    </style>
+</head>
+<body>
+
+<div class="kiosk-container">
+    <h2 style="text-align:center; color:#cc0066; margin-top:0;">MÁY KIOSK TỰ ĐẶT MÓN CHÈ QUỲNH ANH</h2>
+    <p style="color:#666; text-align:center;">* Khách hàng tự chọn món và lấy phiếu in quét mã thanh toán tại quầy</p>
+    
+    <div class="menu-item"><div><b>Mỳ cay thập cẩm (40k)</b></div><div><button class="qty-btn" onclick="add('my', 1)">+</button> <span id="qk_my" style="font-weight:bold; margin:0 8px;">0</span> <button class="qty-btn" onclick="add('my', -1)">-</button></div></div>
+    <div class="menu-item"><div><b>Chè sầu đặc biệt (30k)</b></div><div><button class="qty-btn" onclick="add('che', 1)">+</button> <span id="qk_che" style="font-weight:bold; margin:0 8px;">0</span> <button class="qty-btn" onclick="add('che', -1)">-</button></div></div>
+    <div class="menu-item"><div><b>Khoai tây lắc phô mai (30k)</b></div><div><button class="qty-btn" onclick="add('khoai', 1)">+</button> <span id="qk_khoai" style="font-weight:bold; margin:0 8px;">0</span> <button class="qty-btn" onclick="add('khoai', -1)">-</button></div></div>
+
+    <h3 style="text-align:right; color:#cc0066; margin-top:20px;">Tổng tiền: <span id="k_tong">0</span>đ</h3>
+    <button class="btn-order" onclick="inPhieuKiosk()">IN HÓA ĐƠN & GỬI XUỐNG BẾP</button>
+</div>
+
+<!-- PHÔI IN GIẤY NHIỆT KHÁCH CẦM RA QUẦY -->
+<div class="receipt-print" id="receipt">
+    <h3>TIEM AN VAT & CHE QUYNH ANH</h3>
+    <p>Hotline: 0972.806.926 | WiFi: Phamson</p>
+    <p>==============================</p>
+    <h3>PHIẾU ĐƠN HÀNG: #<span id="r_id"></span></h3>
+    <p id="r_time"></p>
+    <p>==============================</p>
+    <div id="r_list" style="text-align:left;"></div>
+    <p>------------------------------</p>
+    <h3>TỔNG TIỀN: <span id="r_total"></span>đ</h3>
+    <p><i>Vui lòng quét mã VietQR để thanh toán:</i></p>
+    <img id="r_qr" src="" style="width:160px; height:160px;">
+    <p>==============================</p>
+    <p><b>Mang phiếu này ra quầy đối chiếu xác nhận khi Tivi gọi số đơn!</b></p>
+</div>
+
+<script>
+    let slMy = 0, slChe = 0, slKhoai = 0;
+    function add(type, val) {
+        if(type==='my') slMy = Math.max(0, slMy + val); document.getElementById('qk_my').innerText = slMy;
+        if(type==='che') slChe = Math.max(0, slChe + val); document.getElementById('qk_che').innerText = slChe;
+        if(type==='khoai') slKhoai = Math.max(0, slKhoai + val); document.getElementById('qk_khoai').innerText = slKhoai;
+        document.getElementById('k_tong').innerText = (slMy*40000 + slChe*30000 + slKhoai*30000).toLocaleString();
+    }
+
+    function inPhieuKiosk() {
+        let total = slMy*40000 + slChe*30000 + slKhoai*30000;
+        if(total === 0) return alert('Vui lòng chọn món trước!');
+        
+        let orderId = Math.floor(Math.random() * 900) + 100;
+        let listText = [];
+        if(slMy>0) listText.push(`- Mỳ cay thập cẩm x${slMy}: ${(slMy*40000).toLocaleString()}đ`);
+        if(slChe>0) listText.push(`- Chè sầu đặc biệt x${slChe}: ${(slChe*30000).toLocaleString()}đ`);
+        if(slKhoai>0) listText.push(`- Khoai tây lắc x${slKhoai}: ${(slKhoai*30000).toLocaleString()}đ`);
+
+        let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+        orders.push({ id: orderId, type: 'Kiosk Quầy', customer: 'Khách tự đặt máy Kiosk', detail: listText.join(', '), total: total, status: 'Đang chế biến' });
+        localStorage.setItem('orders', JSON.stringify(orders));
+
+        document.getElementById('r_id').innerText = orderId;
+        document.getElementById('r_time').innerText = new Date().toLocaleString('vi-VN');
+        document.getElementById('r_list').innerHTML = listText.join('<br>');
+        document.getElementById('r_total').innerText = total.toLocaleString();
+        document.getElementById('r_qr').src = `https://vietqr.io{total}&addInfo=KFC%20KIOSK%20${orderId}`;
+
+        setTimeout(() => { window.print(); slMy=0; slChe=0; slKhoai=0; add('my', 0); }, 500);
+    }
+</script>
+</body>
+</html>
